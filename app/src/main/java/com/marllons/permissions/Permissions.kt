@@ -18,8 +18,32 @@ import androidx.fragment.app.FragmentActivity
 object Permissions {
 
     private lateinit var resultLauncher: ActivityResultLauncher<Intent>
+    private lateinit var resultLauncherPermissions: ActivityResultLauncher<Array<String>>
 
-    fun registerForActivityResult(activity: FragmentActivity, doAfter: () -> Unit) {
+    @JvmStatic
+    fun checkPermissionsResultLauncher(permissions: Array<String>) {
+        if (this::resultLauncherPermissions.isInitialized) {
+            resultLauncherPermissions.launch(permissions)
+        } else {
+            throw java.lang.Exception("fun registerCheckPermissionsResult(...) must be declared before fun checkPermissionsResultLauncher(...)")
+        }
+    }
+
+    @JvmStatic
+    fun settingsPermissionsResultLauncher() {
+        if (this::resultLauncher.isInitialized) {
+            resultLauncher.launch(getConfigIntent())
+        } else {
+            throw java.lang.Exception("fun registerOpenSettingsPermissionsResult(...) must be declared before fun settingsPermissionsResultLauncher(...)")
+        }
+    }
+
+    private fun getConfigIntent() = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts("package", BuildConfig.APPLICATION_ID, null)
+    }
+
+    @JvmStatic
+    fun registerOpenSettingsPermissionsResult(activity: FragmentActivity, doAfter: () -> Unit) {
         resultLauncher = activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == AppCompatActivity.RESULT_CANCELED) {
                 doAfter.invoke()
@@ -27,10 +51,49 @@ object Permissions {
         }
     }
 
-    fun registerForActivityResult(fragment: Fragment, doAfter: () -> Unit) {
+    @JvmStatic
+    fun registerOpenSettingsPermissionsResult(fragment: Fragment, doAfter: () -> Unit) {
         resultLauncher = fragment.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == AppCompatActivity.RESULT_CANCELED) {
                 doAfter.invoke()
+            }
+        }
+    }
+
+    @JvmStatic
+    fun registerCheckPermissionsResult(activity: FragmentActivity, onPermission: OnPermissionCallback) {
+        resultLauncherPermissions = activity.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val granted = permissions.entries.all {
+                it.value
+            }
+            if (granted) {
+                onPermission.onPermissionsGranted()
+            } else {
+                val p = permissions.keys.toTypedArray()
+                if ((activity as Context).requestPermissionRationale(p)) {
+                    onPermission.onPermissionsDeniedFully()
+                } else {
+                    onPermission.onPermissionsDenied()
+                }
+            }
+        }
+    }
+
+    @JvmStatic
+    fun registerCheckPermissionsResult(fragment: Fragment, onPermission: OnPermissionCallback) {
+        resultLauncherPermissions = fragment.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val granted = permissions.entries.all {
+                it.value
+            }
+            if (granted) {
+                onPermission.onPermissionsGranted()
+            } else {
+                val p = permissions.keys.toTypedArray()
+                if ((fragment.requireActivity()).requestPermissionRationale(p)) {
+                    onPermission.onPermissionsDeniedFully()
+                } else {
+                    onPermission.onPermissionsDenied()
+                }
             }
         }
     }
@@ -49,32 +112,43 @@ object Permissions {
         return true
     }
 
+
+    @Deprecated(
+        message = "Should use checkPermissionsResultLauncher(...)",
+        replaceWith = ReplaceWith(
+            "Permission.checkPermissionsResultLauncher(Permission, OnPermissionCallback)",
+            "br.com.gestorescolar.app.module.core.utils.Permission.checkPermissionsResultLauncher"
+        )
+    )
     private fun Context.requestPermissionsCompat(permissions: Array<out String>, requestCode: Int) {
         requestPermissions((this as Activity), permissions, requestCode)
     }
 
+    @Deprecated(
+        message = "Should use checkPermissionsResultLauncher(...)",
+        replaceWith = ReplaceWith(
+            "Permission.checkPermissionsResultLauncher(Permission, OnPermissionCallback)",
+            "br.com.gestorescolar.app.module.core.utils.Permission.checkPermissionsResultLauncher"
+        )
+    )
     fun Context.checkAndRequestPermissions(necessaryPermissions: Array<out String>, requestCode: Int) {
         this.requestPermissionsCompat(necessaryPermissions, requestCode)
     }
 
-    fun openSettingsPermissionsForActivityResult() {
-        if (this::resultLauncher.isInitialized) {
-            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = Uri.fromParts("package", BuildConfig.APPLICATION_ID, null)
-            }
-            resultLauncher.launch(intent)
-        } else {
-            throw java.lang.Exception("should register activity result calling fun registerForActivityResult(...)")
-        }
-    }
-
+    @Deprecated(
+        message = "Should use checkPermissionsResultLauncher(...)",
+        replaceWith = ReplaceWith(
+            "Permission.checkPermissionsResultLauncher(Permission, OnPermissionCallback)",
+            "br.com.gestorescolar.app.module.core.utils.Permission.checkPermissionsResultLauncher"
+        )
+    )
     fun onRequestPermissionsResult(
+        context: Context,
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray,
-        context: Context,
         responseCode: Int,
-        onPermission: OnPermissionCallback
+        onPermission: OnPermissionCallback,
     ) {
         when (requestCode) {
             responseCode -> {
